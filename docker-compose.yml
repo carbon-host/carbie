@@ -1,0 +1,9 @@
+version: '3.0'
+
+services:
+  carbie:
+    build: .
+    container_name: carbie
+    restart: unless-stopped
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}

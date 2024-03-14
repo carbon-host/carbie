@@ -30,8 +30,6 @@ func main() {
 		s.ChannelMessageSend(message.ChannelID, message.Content)
 	})
 
-	sess.commands
-
 	sess.Identify.Intents = discordgo.IntentsAllWithoutPrivileged
 
 	err = sess.Open()
