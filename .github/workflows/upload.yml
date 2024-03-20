@@ -1,0 +1,55 @@
+name: Compile & Deploy Go Binary
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on new tags that start with 'v'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+
+      - name: Build binary
+        run: go build -o carbie
+
+      - name: Install JQ
+        run: sudo apt-get install jq
+
+      - name: Obtain Pterodactyl upload endpoint
+        run: |
+          response=$(curl "https://${{ secrets.PTERO_HOST }}/api/client/servers/${{ secrets.PTERO_SERVER_ID }}/files/upload" \
+            -H 'Accept: application/json' \
+            -H 'Content-Type: application/json' \
+            -H "Authorization: Bearer ${{ secrets.PTERO_API_KEY }}" \
+            -X GET)
+          url=$(echo "$response" | jq -r .attributes.url)
+          echo "URL=$url" >> $GITHUB_ENV
+
+      - name: Upload binary to Pterodactyl upload endpoint
+        run: |
+          echo $URL
+          file="./carbie"
+          curl "$URL&directory=/path/to/destination" \
+            -H 'Content-Type: multipart/form-data' \
+            -F "files=@$file" \
+            -X POST
+
+      - name: Restart Pterodactyl server
+        run: |
+          curl "https://${{ secrets.PTERO_HOST }}/api/client/servers/${{ secrets.PTERO_SERVER_ID }}/power" \
+            -H 'Accept: application/json' \
+            -H 'Content-Type: application/json' \
+            -H "Authorization: Bearer ${{ secrets.PTERO_API_KEY }}" \
+            -X POST \
+            -d '{
+              "signal": "restart"
+            }'
