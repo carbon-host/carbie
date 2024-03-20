@@ -40,7 +40,8 @@ jobs:
       - name: Upload binary to Pterodactyl upload endpoint
         run: |
           echo $URL
-          file="./carbie"
+          file="carbie"
+          echo "Uploading $file to $URL"
           curl "$URL" \
             -H 'Content-Type: multipart/form-data' \
             -F "files=@$file" \
