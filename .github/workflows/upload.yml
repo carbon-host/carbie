@@ -37,18 +37,7 @@ jobs:
           url=$(echo "$response" | jq -r .attributes.url)
           echo "URL=$url" >> $GITHUB_ENV
 
-      - name: Upload binary to Pterodactyl upload endpoint
-        run: |
-          echo $URL
-          file="carbie"
-          echo "file size: $(stat -c%s $file)"
-          echo "Uploading $file to $URL"
-          curl "$URL" \
-            -H 'Content-Type: multipart/form-data' \
-            -F "files=@$file" \
-            -X POST
-
-      - name: Restart Pterodactyl server
+      - name: Stop Pterodactyl server
         run: |
           curl "https://${{ vars.PTERO_HOST }}/api/client/servers/${{ vars.PTERO_SERVER_ID }}/power" \
             -H 'Accept: application/json' \
@@ -56,5 +45,25 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.PTERO_API_KEY }}" \
             -X POST \
             -d '{
-              "signal": "restart"
+              "signal": "stop"
+            }'
+
+      - name: Upload binary to Pterodactyl upload endpoint
+        run: |
+          echo $URL
+          file="carbie"
+          curl "$URL" \
+            -H 'Content-Type: multipart/form-data' \
+            -F "files=@$file" \
+            -X POST
+
+      - name: Start Pterodactyl server
+        run: |
+          curl "https://${{ vars.PTERO_HOST }}/api/client/servers/${{ vars.PTERO_SERVER_ID }}/power" \
+            -H 'Accept: application/json' \
+            -H 'Content-Type: application/json' \
+            -H "Authorization: Bearer ${{ secrets.PTERO_API_KEY }}" \
+            -X POST \
+            -d '{
+              "signal": "start"
             }'
