@@ -2,8 +2,8 @@ name: Compile & Deploy Go Binary
 
 on:
   push:
-    tags:
-      - 'v*' # Trigger on new tags that start with 'v'
+    branches:
+      - master
 
 jobs:
   build:
@@ -19,7 +19,10 @@ jobs:
           go-version: 1.17
 
       - name: Build binary
-        run: go build -o carbie
+        run: go build
+
+      - name: ls
+        run: ls
 
       - name: Install JQ
         run: sudo apt-get install jq
