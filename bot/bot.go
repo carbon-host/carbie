@@ -38,6 +38,11 @@ func Run() {
 
 	fmt.Println("Carbie is now running. Press CTRL + C to exit.")
 
+	err = discord.UpdateGameStatus(0, "on Carbon.host")
+	if err != nil {
+		return
+	}
+
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
