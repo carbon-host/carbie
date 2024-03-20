@@ -5,13 +5,15 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
+	"strconv"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 var Token string
+var GuildID string
+var AppID string
 
 func checkNilErr(e error) {
 	if e != nil {
@@ -24,7 +26,12 @@ func Run() {
 	discord, err := discordgo.New("Bot " + Token)
 	checkNilErr(err)
 
-	discord.AddHandler(newMessage)
+	_, err = discord.ApplicationCommandBulkOverwrite(AppID, GuildID, registerCommands())
+	if err != nil {
+		return
+	}
+
+	discord.AddHandler(handleCommands)
 
 	discord.Open()
 	defer discord.Close()
@@ -37,17 +44,45 @@ func Run() {
 
 }
 
-func newMessage(discord *discordgo.Session, message *discordgo.MessageCreate) {
-
-	if message.Author.ID == discord.State.User.ID {
-		return
+func registerCommands() []*discordgo.ApplicationCommand {
+	commands := []*discordgo.ApplicationCommand{
+		{
+			Name:        "status",
+			Description: "Replies with Carbie's status",
+		},
 	}
 
-	switch {
-	case strings.Contains(message.Content, "!hi"):
-		discord.ChannelMessageSend(message.ChannelID, "Hello World😃")
-	case strings.Contains(message.Content, "!bye"):
-		discord.ChannelMessageSend(message.ChannelID, "Good Bye👋")
-	}
+	return commands
+}
 
+func handleCommands(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	data := i.ApplicationCommandData()
+
+	switch data.Name {
+	case "status":
+		err := s.InteractionRespond(
+			i.Interaction,
+			&discordgo.InteractionResponse{
+
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Embeds: []*discordgo.MessageEmbed{
+						{
+							Color: 0x2B2D31,
+							Title: "Carbie Status",
+							Fields: []*discordgo.MessageEmbedField{
+								{
+									Name:  "Latency",
+									Value: strconv.FormatInt(s.HeartbeatLatency().Milliseconds(), 10) + "ms",
+								},
+							},
+						},
+					},
+				},
+			},
+		)
+
+		checkNilErr(err)
+
+	}
 }
