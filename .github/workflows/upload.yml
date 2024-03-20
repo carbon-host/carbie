@@ -2,8 +2,8 @@ name: Compile & Deploy Go Binary
 
 on:
   push:
-    branches:
-      - master
+    tags:
+      - 'v*'
 
 jobs:
   build:
