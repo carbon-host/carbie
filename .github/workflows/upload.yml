@@ -26,7 +26,7 @@ jobs:
 
       - name: Obtain Pterodactyl upload endpoint
         run: |
-          response=$(curl "https://${{ secrets.PTERO_HOST }}/api/client/servers/${{ secrets.PTERO_SERVER_ID }}/files/upload" \
+          response=$(curl "https://${{ vars.PTERO_HOST }}/api/client/servers/${{ vars.PTERO_SERVER_ID }}/files/upload" \
             -H 'Accept: application/json' \
             -H 'Content-Type: application/json' \
             -H "Authorization: Bearer ${{ secrets.PTERO_API_KEY }}" \
