@@ -1,9 +1,9 @@
 package main
 
 import (
+	"github.com/carbon-host/carbie/bot"
 	"github.com/joho/godotenv"
 	"log"
-	"mongo-go-http/bot"
 	"os"
 )
 

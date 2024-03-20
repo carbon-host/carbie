@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -20,22 +21,19 @@ func checkNilErr(e error) {
 
 func Run() {
 
-	// create a session
 	discord, err := discordgo.New("Bot " + Token)
 	checkNilErr(err)
 
-	// add a event handler
 	discord.AddHandler(newMessage)
 
-	// open session
 	discord.Open()
-	defer discord.Close() // close session, after function termination
+	defer discord.Close()
 
-	// keep bot running untill there is NO os interruption (ctrl + C)
-	fmt.Println("Bot running....")
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	<-c
+	fmt.Println("Carbie is now running. Press CTRL + C to exit.")
+
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
+	<-sc
 
 }
 
