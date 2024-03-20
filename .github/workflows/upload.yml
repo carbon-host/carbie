@@ -41,6 +41,7 @@ jobs:
         run: |
           echo $URL
           file="carbie"
+          echo "file size: $(stat -c%s $file)"
           echo "Uploading $file to $URL"
           curl "$URL" \
             -H 'Content-Type: multipart/form-data' \
