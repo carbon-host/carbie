@@ -45,7 +45,7 @@ jobs:
 
       - name: Restart Pterodactyl server
         run: |
-          curl "https://${{ secrets.PTERO_HOST }}/api/client/servers/${{ secrets.PTERO_SERVER_ID }}/power" \
+          curl "https://${{ vars.PTERO_HOST }}/api/client/servers/${{ vars.PTERO_SERVER_ID }}/power" \
             -H 'Accept: application/json' \
             -H 'Content-Type: application/json' \
             -H "Authorization: Bearer ${{ secrets.PTERO_API_KEY }}" \
