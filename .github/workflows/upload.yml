@@ -38,7 +38,7 @@ jobs:
         run: |
           echo $URL
           file="./carbie"
-          curl "$URL&directory=/path/to/destination" \
+          curl "$URL&directory=/" \
             -H 'Content-Type: multipart/form-data' \
             -F "files=@$file" \
             -X POST
