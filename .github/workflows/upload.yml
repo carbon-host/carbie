@@ -21,9 +21,6 @@ jobs:
       - name: Build binary
         run: go build
 
-      - name: ls
-        run: ls
-
       - name: Install JQ
         run: sudo apt-get install jq
 
@@ -57,7 +54,7 @@ jobs:
             -F "files=@$file" \
             -X POST
 
-      - name: Start Pterodactyl server
+      - name: Restart Pterodactyl server
         run: |
           curl "https://${{ vars.PTERO_HOST }}/api/client/servers/${{ vars.PTERO_SERVER_ID }}/power" \
             -H 'Accept: application/json' \
@@ -65,5 +62,5 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.PTERO_API_KEY }}" \
             -X POST \
             -d '{
-              "signal": "start"
+              "signal": "restart"
             }'
