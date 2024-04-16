@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/carbon-host/carbie/bot"
+	"github.com/carbon-host/carbie/cmd/bot"
 	"github.com/joho/godotenv"
 	"log"
 	"os"
