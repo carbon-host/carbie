@@ -2,10 +2,10 @@ package bot
 
 import (
 	"fmt"
+	"github.com/carbon-host/carbie/internal/commands"
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -65,27 +65,7 @@ func handleCommands(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	switch data.Name {
 	case "status":
-		err := s.InteractionRespond(
-			i.Interaction,
-			&discordgo.InteractionResponse{
-
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Embeds: []*discordgo.MessageEmbed{
-						{
-							Color: 0x2B2D31,
-							Title: "Carbie Status",
-							Fields: []*discordgo.MessageEmbedField{
-								{
-									Name:  "Latency",
-									Value: strconv.FormatInt(s.HeartbeatLatency().Milliseconds(), 10) + "ms",
-								},
-							},
-						},
-					},
-				},
-			},
-		)
+		err := commands.StatusCmd(s, i)
 
 		checkNilErr(err)
 
