@@ -55,8 +55,9 @@ func Run() {
 func registerCommands() []*discordgo.ApplicationCommand {
 	commands := []*discordgo.ApplicationCommand{
 		{
-			Name:        "status",
-			Description: "Replies with Carbie's status",
+			Name:                     "status",
+			Description:              "Replies with Carbie's status",
+			DefaultMemberPermissions: PermPtr(discordgo.PermissionSendMessages),
 		},
 	}
 
@@ -73,4 +74,9 @@ func handleCommands(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		checkNilErr(err)
 
 	}
+}
+
+func PermPtr(v int) *int64 {
+	a := int64(v)
+	return &a
 }
