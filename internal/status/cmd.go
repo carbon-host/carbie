@@ -30,7 +30,7 @@ func StatusCmd(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 		case "stopped":
 			statusEmoji = ":red_circle:"
 		default:
-			statusEmoji = ":grey_question:"
+			statusEmoji = ":black_circle:"
 		}
 
 		hourlyCost, err := strconv.ParseFloat(server.ServerType.Pricings[0].Hourly.Gross, 64)
