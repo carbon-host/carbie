@@ -46,13 +46,13 @@ func CreateStatusEmbed() (embed *discordgo.MessageEmbed, err error) {
 		totalMonthlyCost += monthlyCost
 
 		description.WriteString(fmt.Sprintf("**%s** %s\n", server.Name, statusEmoji))
-		description.WriteString(fmt.Sprintf("> Location: %s\n", server.Datacenter.Name))
-		description.WriteString(fmt.Sprintf("> Server Type: %s\n", server.ServerType.Name))
-		description.WriteString(fmt.Sprintf("> Hourly Cost: %.5f €\n", hourlyCost))
-		description.WriteString(fmt.Sprintf("> Monthly Cost: %.2f €\n\n", monthlyCost))
+		description.WriteString(fmt.Sprintf("> Location: `%s`\n", server.Datacenter.Name))
+		description.WriteString(fmt.Sprintf("> Server Type: `%s`\n", server.ServerType.Name))
+		description.WriteString(fmt.Sprintf("> Hourly Cost: `%.5f`\n", hourlyCost))
+		description.WriteString(fmt.Sprintf("> Monthly Cost: `%.2f`\n\n", monthlyCost))
 	}
 
-	footerText := fmt.Sprintf("Total Hourly Cost: %.5f € | Total Monthly Cost: %.2f €", totalHourlyCost, totalMonthlyCost)
+	footerText := fmt.Sprintf("Total Hourly Cost: `%.5f €` | Total Monthly Cost: `%.2f €`", totalHourlyCost, totalMonthlyCost)
 
 	return &discordgo.MessageEmbed{
 		Color:       0x2B2D31,
