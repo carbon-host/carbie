@@ -14,6 +14,7 @@ import (
 var Token string
 var GuildID string
 var AppID string
+var ServerStatusChannelID string
 
 func checkNilErr(e error) {
 	if e != nil {
@@ -42,6 +43,8 @@ func Run() {
 	if err != nil {
 		return
 	}
+
+	status.SendStatusEmbed(discord, ServerStatusChannelID)
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)

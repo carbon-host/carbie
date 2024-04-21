@@ -24,5 +24,6 @@ func main() {
 	bot.Token = os.Getenv("BOT_TOKEN")
 	bot.GuildID = os.Getenv("GUILD_ID")
 	bot.AppID = os.Getenv("APP_ID")
+	bot.ServerStatusChannelID = os.Getenv("SERVER_STATUS_CHANNEL_ID")
 	bot.Run()
 }
