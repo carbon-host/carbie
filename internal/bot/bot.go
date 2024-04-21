@@ -2,7 +2,7 @@ package bot
 
 import (
 	"fmt"
-	"github.com/carbon-host/carbie/internal/commands"
+	"github.com/carbon-host/carbie/internal/status"
 	"log"
 	"os"
 	"os/signal"
@@ -65,7 +65,7 @@ func handleCommands(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	switch data.Name {
 	case "status":
-		err := commands.StatusCmd(s, i)
+		err := status.StatusCmd(s, i)
 
 		checkNilErr(err)
 
