@@ -19,7 +19,7 @@ jobs:
           go-version: 1.17
 
       - name: Build binary
-        run: go build
+        run: go build ./cmd/bot/main.go -o carbie
 
       - name: Install JQ
         run: sudo apt-get install jq
