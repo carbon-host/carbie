@@ -73,10 +73,10 @@ func HandleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	// if m.Author.ID == result.LastUserID {
-	// 	s.ChannelMessageSend(m.ChannelID, "You can't count twice in a row, let someone else go!")
-	// 	return
-	// }
+	if m.Author.ID == result.LastUserID {
+		s.ChannelMessageSend(m.ChannelID, "You can't count twice in a row, let someone else go!")
+		return
+	}
 
 	if number == result.Number+1 {
 		_, err = collection.UpdateOne(
