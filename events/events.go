@@ -21,7 +21,7 @@ import (
 const (
 	RoleID            = "1264762459202519113"
 	WelcomeChannelID  = "1264702868649279489"
-	CountingChannelID = "1265028002417217721"
+	CountingChannelID = "1265077210897842239"
 )
 
 var (
