@@ -1,0 +1,15 @@
+{
+    "name": "Go 1.22.5",
+    "image": "golang:1.22.5",
+    "features": {
+        "golang": "1.22.5"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "golang.go"
+            ]
+        }
+    },
+    "remoteUser": "vscode"
+}
