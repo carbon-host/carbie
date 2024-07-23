@@ -3,6 +3,10 @@ package events
 import (
 	"context"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"math"
 	"strconv"
 	"time"
 
@@ -17,7 +21,7 @@ import (
 const (
 	RoleID            = "1264762459202519113"
 	WelcomeChannelID  = "1264702868649279489"
-	CountingChannelID = "1265077210897842239"
+	CountingChannelID = "1265028002417217721"
 )
 
 var (
@@ -53,13 +57,13 @@ func HandleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	number, err := strconv.Atoi(m.Content)
+	result, err := evaluateMathExpression(m.Content)
 	if err != nil {
 		return
 	}
 
 	collection := db.Collection("counting")
-	var result struct {
+	var dbResult struct {
 		Number     int    `bson:"number"`
 		LastUserID string `bson:"last_user_id"`
 	}
@@ -67,22 +71,22 @@ func HandleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = collection.FindOne(ctx, bson.M{"channel_id": CountingChannelID}).Decode(&result)
+	err = collection.FindOne(ctx, bson.M{"channel_id": CountingChannelID}).Decode(&dbResult)
 	if err != nil && err != mongo.ErrNoDocuments {
 		s.ChannelMessageSend(m.ChannelID, "Error checking the count. Please try again.")
 		return
 	}
 
-	if m.Author.ID == result.LastUserID {
+	if m.Author.ID == dbResult.LastUserID {
 		s.ChannelMessageSend(m.ChannelID, "You can't count twice in a row, let someone else go!")
 		return
 	}
 
-	if number == result.Number+1 {
+	if int(result) == dbResult.Number+1 {
 		_, err = collection.UpdateOne(
 			ctx,
 			bson.M{"channel_id": CountingChannelID},
-			bson.M{"$set": bson.M{"number": number, "last_user_id": m.Author.ID}},
+			bson.M{"$set": bson.M{"number": int(result), "last_user_id": m.Author.ID}},
 			options.Update().SetUpsert(true),
 		)
 		if err != nil {
@@ -106,6 +110,86 @@ func HandleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		s.MessageReactionAdd(m.ChannelID, m.ID, "downvote:1265029801408729210")
 	}
+}
+
+func evaluateMathExpression(expr string) (float64, error) {
+	exp, err := parser.ParseExpr(expr)
+	if err != nil {
+		return 0, err
+	}
+
+	return evalAST(exp)
+}
+
+func evalAST(exp ast.Expr) (float64, error) {
+	switch exp := exp.(type) {
+	case *ast.BasicLit:
+		return strconv.ParseFloat(exp.Value, 64)
+	case *ast.ParenExpr:
+		return evalAST(exp.X)
+	case *ast.UnaryExpr:
+		x, err := evalAST(exp.X)
+		if err != nil {
+			return 0, err
+		}
+		switch exp.Op {
+		case token.SUB:
+			return -x, nil
+		case token.ADD:
+			return x, nil
+		}
+	case *ast.BinaryExpr:
+		x, err := evalAST(exp.X)
+		if err != nil {
+			return 0, err
+		}
+		y, err := evalAST(exp.Y)
+		if err != nil {
+			return 0, err
+		}
+		switch exp.Op {
+		case token.ADD:
+			return x + y, nil
+		case token.SUB:
+			return x - y, nil
+		case token.MUL:
+			return x * y, nil
+		case token.QUO:
+			if y == 0 {
+				return 0, fmt.Errorf("division by zero")
+			}
+			return x / y, nil
+		case token.REM:
+			return float64(int(x) % int(y)), nil
+		case token.XOR:
+			return math.Pow(x, y), nil
+		}
+	case *ast.CallExpr:
+		if ident, ok := exp.Fun.(*ast.Ident); ok {
+			if len(exp.Args) != 1 {
+				return 0, fmt.Errorf("function %s expects 1 argument", ident.Name)
+			}
+			arg, err := evalAST(exp.Args[0])
+			if err != nil {
+				return 0, err
+			}
+			switch ident.Name {
+			case "sin":
+				return math.Sin(arg), nil
+			case "cos":
+				return math.Cos(arg), nil
+			case "tan":
+				return math.Tan(arg), nil
+			case "log":
+				return math.Log10(arg), nil
+			case "ln":
+				return math.Log(arg), nil
+			case "sqrt":
+				return math.Sqrt(arg), nil
+			}
+		}
+	}
+	return 0, fmt.Errorf("unsupported expression")
 }
 
 func HandleGuildMemberAdd(s *discordgo.Session, m *discordgo.GuildMemberAdd) {
