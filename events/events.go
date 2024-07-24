@@ -21,7 +21,7 @@ import (
 const (
 	RoleID            = "1264762459202519113"
 	WelcomeChannelID  = "1264702868649279489"
-	CountingChannelID = "1265077210897842239"
+	CountingChannelID = "1265028002417217721"
 )
 
 var (
@@ -52,8 +52,25 @@ func init() {
 	fmt.Println("Successfully connected to MongoDB")
 }
 
+var messageCache = make(map[string]string) // messageId -> authorId
+
 func HandleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	if m.ChannelID != CountingChannelID {
+	// Fetch the counting channel ID from MongoDB
+	collection := db.Collection("guild_settings")
+	var guildSettings struct {
+		CountingChannelID string `bson:"counting_channel_id"`
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := collection.FindOne(ctx, bson.M{"guild_id": m.GuildID}).Decode(&guildSettings)
+	if err != nil {
+		// Handle error or return if no settings found
+		return
+	}
+
+	if m.ChannelID != guildSettings.CountingChannelID {
 		return
 	}
 
@@ -62,21 +79,24 @@ func HandleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	collection := db.Collection("counting")
+	messageCache[m.ID] = m.Author.ID
+
+	collection = db.Collection("counting")
 	var dbResult struct {
 		Number     int    `bson:"number"`
 		LastUserID string `bson:"last_user_id"`
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = collection.FindOne(ctx, bson.M{"channel_id": CountingChannelID}).Decode(&dbResult)
+	err = collection.FindOne(ctx, bson.M{"channel_id": guildSettings.CountingChannelID}).Decode(&dbResult)
 	if err != nil && err != mongo.ErrNoDocuments {
 		s.ChannelMessageSend(m.ChannelID, "Error checking the count. Please try again.")
 		return
 	}
 
+	// Uncomment this if you want to prevent users from counting twice in a row
 	if m.Author.ID == dbResult.LastUserID {
 		s.ChannelMessageSend(m.ChannelID, "You can't count twice in a row, let someone else go!")
 		return
@@ -85,7 +105,7 @@ func HandleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if int(result) == dbResult.Number+1 {
 		_, err = collection.UpdateOne(
 			ctx,
-			bson.M{"channel_id": CountingChannelID},
+			bson.M{"channel_id": guildSettings.CountingChannelID},
 			bson.M{"$set": bson.M{"number": int(result), "last_user_id": m.Author.ID}},
 			options.Update().SetUpsert(true),
 		)
@@ -100,7 +120,7 @@ func HandleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		_, err = collection.UpdateOne(
 			ctx,
-			bson.M{"channel_id": CountingChannelID},
+			bson.M{"channel_id": guildSettings.CountingChannelID},
 			bson.M{"$set": bson.M{"number": 0, "last_user_id": ""}},
 			options.Update().SetUpsert(true),
 		)
@@ -192,6 +212,77 @@ func evalAST(exp ast.Expr) (float64, error) {
 	return 0, fmt.Errorf("unsupported expression")
 }
 
+func HandleMessageDelete(s *discordgo.Session, m *discordgo.MessageDelete) {
+	if m.ChannelID != CountingChannelID {
+		return
+	}
+
+	authorID, ok := messageCache[m.ID]
+	if !ok {
+		return
+	}
+
+	collection := db.Collection("counting")
+	var dbResult struct {
+		Number int `bson:"number"`
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := collection.FindOne(ctx, bson.M{"channel_id": CountingChannelID}).Decode(&dbResult)
+	if err != nil {
+		fmt.Println("Error fetching current count:", err)
+		return
+	}
+
+	message := fmt.Sprintf("<@%s> Deleted their number because they felt like being a bum. The count is currently at %d", authorID, dbResult.Number)
+	delete(messageCache, m.ID)
+
+	_, err = s.ChannelMessageSend(CountingChannelID, message)
+	if err != nil {
+		fmt.Println("Error sending message about deleted number:", err)
+	}
+}
+
+func HandleMessageEdit(s *discordgo.Session, m *discordgo.MessageUpdate) {
+	if m.ChannelID != CountingChannelID {
+		return
+	}
+
+	_, ok := messageCache[m.ID]
+	if !ok {
+		return
+	}
+
+	_, err := evaluateMathExpression(m.Content)
+	if err == nil {
+		return
+	}
+
+	collection := db.Collection("counting")
+	var dbResult struct {
+		Number int `bson:"number"`
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = collection.FindOne(ctx, bson.M{"channel_id": CountingChannelID}).Decode(&dbResult)
+	if err != nil {
+		fmt.Println("Error fetching current count:", err)
+		return
+	}
+
+	message := fmt.Sprintf("<@%s> Edited their number because they felt like being a bum. The count is currently at %d", m.Author.ID, dbResult.Number)
+	delete(messageCache, m.ID)
+
+	_, err = s.ChannelMessageSend(CountingChannelID, message)
+	if err != nil {
+		fmt.Println("Error sending message about edited number:", err)
+	}
+}
+
 func HandleGuildMemberAdd(s *discordgo.Session, m *discordgo.GuildMemberAdd) {
 	targetGuildID := config.Load().GuildID
 
@@ -219,4 +310,6 @@ func HandleGuildMemberAdd(s *discordgo.Session, m *discordgo.GuildMemberAdd) {
 func SetupEventHandlers(s *discordgo.Session) {
 	s.AddHandler(HandleGuildMemberAdd)
 	s.AddHandler(HandleMessageCreate)
+	s.AddHandler(HandleMessageDelete)
+	s.AddHandler(HandleMessageEdit)
 }
