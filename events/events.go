@@ -213,7 +213,20 @@ func evalAST(exp ast.Expr) (float64, error) {
 }
 
 func HandleMessageDelete(s *discordgo.Session, m *discordgo.MessageDelete) {
-	if m.ChannelID != CountingChannelID {
+	settingsCollection := db.Collection("guild_settings")
+	var guildSettings struct {
+		CountingChannelID string `bson:"counting_channel_id"`
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := settingsCollection.FindOne(ctx, bson.M{"guild_id": m.GuildID}).Decode(&guildSettings)
+	if err != nil {
+		return
+	}
+
+	if m.ChannelID != guildSettings.CountingChannelID {
 		return
 	}
 
@@ -227,10 +240,10 @@ func HandleMessageDelete(s *discordgo.Session, m *discordgo.MessageDelete) {
 		Number int `bson:"number"`
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err := collection.FindOne(ctx, bson.M{"channel_id": CountingChannelID}).Decode(&dbResult)
+	err = collection.FindOne(ctx, bson.M{"channel_id": guildSettings.CountingChannelID}).Decode(&dbResult)
 	if err != nil {
 		fmt.Println("Error fetching current count:", err)
 		return
@@ -239,7 +252,7 @@ func HandleMessageDelete(s *discordgo.Session, m *discordgo.MessageDelete) {
 	message := fmt.Sprintf("<@%s> Deleted their number because they felt like being a bum. The count is currently at %d", authorID, dbResult.Number)
 	delete(messageCache, m.ID)
 
-	_, err = s.ChannelMessageSend(CountingChannelID, message)
+	_, err = s.ChannelMessageSend(guildSettings.CountingChannelID, message)
 	if err != nil {
 		fmt.Println("Error sending message about deleted number:", err)
 	}
