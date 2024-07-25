@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"log"
 	"math"
 	"strconv"
 	"time"
@@ -320,9 +321,156 @@ func HandleGuildMemberAdd(s *discordgo.Session, m *discordgo.GuildMemberAdd) {
 	}
 }
 
+func HandleInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	switch i.Type {
+	case discordgo.InteractionMessageComponent:
+		if i.MessageComponentData().CustomID == "beta_signup" {
+			handleBetaSignup(s, i)
+		}
+	case discordgo.InteractionModalSubmit:
+		if i.ModalSubmitData().CustomID == "beta_signup_modal" {
+			handleBetaSignupSubmit(s, i)
+		}
+	}
+}
+
+func handleBetaSignup(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	modal := discordgo.InteractionResponseData{
+		CustomID: "beta_signup_modal",
+		Title:    "Beta Tester Signup",
+		Components: []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.TextInput{
+						CustomID:    "contact_permission",
+						Label:       "Can we contact you about this in the future?",
+						Style:       discordgo.TextInputShort,
+						Placeholder: "Yes/No",
+						Required:    true,
+						MaxLength:   3,
+						MinLength:   2,
+					},
+				},
+			},
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.TextInput{
+						CustomID:    "first_name",
+						Label:       "What is your First Name?",
+						Style:       discordgo.TextInputShort,
+						Placeholder: "Enter your first name",
+						Required:    true,
+						MaxLength:   50,
+					},
+				},
+			},
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.TextInput{
+						CustomID:    "email",
+						Label:       "What is your Email?",
+						Style:       discordgo.TextInputShort,
+						Placeholder: "Enter your email address",
+						Required:    true,
+						MaxLength:   100,
+					},
+				},
+			},
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.TextInput{
+						CustomID:    "age_check",
+						Label:       "Are you aged 13 or older?",
+						Style:       discordgo.TextInputShort,
+						Placeholder: "Yes/No",
+						Required:    true,
+						MaxLength:   3,
+						MinLength:   2,
+					},
+				},
+			},
+		},
+	}
+
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseModal,
+		Data: &modal,
+	})
+	if err != nil {
+		fmt.Println("Error showing modal:", err)
+	}
+}
+
+func handleBetaSignupSubmit(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	data := i.ModalSubmitData()
+
+	contactPermission := data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
+	firstName := data.Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
+	email := data.Components[2].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
+	ageCheck := data.Components[3].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
+
+	collection := db.Collection("testers")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tester := bson.M{
+		"_id":                i.Member.User.ID,
+		"contact_permission": contactPermission,
+		"first_name":         firstName,
+		"email":              email,
+		"age_check":          ageCheck,
+		"signup_date":        time.Now(),
+	}
+
+	_, err := collection.InsertOne(ctx, tester)
+	if err != nil {
+		log.Println("Error storing tester data in MongoDB:", err)
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title: "New Beta Tester Signup",
+		Color: 0xB72F57, // Green color
+		Fields: []*discordgo.MessageEmbedField{
+			{
+				Name:  "Contact Permission",
+				Value: contactPermission,
+			},
+			{
+				Name:  "First Name",
+				Value: firstName,
+			},
+			{
+				Name:  "Email",
+				Value: email,
+			},
+			{
+				Name:  "Age 13+",
+				Value: ageCheck,
+			},
+		},
+	}
+
+	_, err = s.ChannelMessageSendEmbed("1265870251699208202", embed)
+	if err != nil {
+		log.Println("Error sending form content:", err)
+	}
+
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: "Thank you for signing up as a beta tester!",
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	})
+	if err != nil {
+		log.Println("Error responding to interaction:", err)
+	}
+}
+
 func SetupEventHandlers(s *discordgo.Session) {
 	s.AddHandler(HandleGuildMemberAdd)
 	s.AddHandler(HandleMessageCreate)
 	s.AddHandler(HandleMessageDelete)
 	s.AddHandler(HandleMessageEdit)
+	s.AddHandler(HandleInteraction)
 }

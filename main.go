@@ -33,6 +33,8 @@ func main() {
 
 	events.SetupEventHandlers(discord)
 	discord.AddHandler(commands.HandleCommands)
+	discord.AddHandler(commands.HandleModalSubmit)
+
 	discord.Identify.Intents = discordgo.IntentsGuildMembers | discordgo.IntentsGuildMessages | discordgo.IntentsMessageContent
 
 	err = discord.Open()
