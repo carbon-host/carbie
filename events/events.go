@@ -428,9 +428,7 @@ func handleBetaSignupSubmit(s *discordgo.Session, i *discordgo.InteractionCreate
 		return
 	}
 
-	split := strings.Split(email, "@")
-	prefix := strings.Repeat("*", len(split[0]))
-	suffix := split[1]
+	displayEmail := strings.Repeat("*", len(email))
 
 	embed := &discordgo.MessageEmbed{
 		Title: "New Beta Tester Signup",
@@ -446,7 +444,7 @@ func handleBetaSignupSubmit(s *discordgo.Session, i *discordgo.InteractionCreate
 			},
 			{
 				Name:  "Email",
-				Value: "```" + prefix + "@" + suffix + "```",
+				Value: "```" + displayEmail + "```",
 			},
 			{
 				Name:  "Age 13+",
