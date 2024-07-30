@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -41,7 +42,7 @@ func init() {
 		panic(err)
 	}
 
-	db = client.Database("carbie")
+	db = client.Database("carbiedev")
 
 	ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -56,7 +57,6 @@ func init() {
 var messageCache = make(map[string]string) // messageId -> authorId
 
 func HandleMessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// Fetch the counting channel ID from MongoDB
 	collection := db.Collection("guild_settings")
 	var guildSettings struct {
 		CountingChannelID string `bson:"counting_channel_id"`
@@ -425,7 +425,12 @@ func handleBetaSignupSubmit(s *discordgo.Session, i *discordgo.InteractionCreate
 	_, err := collection.InsertOne(ctx, tester)
 	if err != nil {
 		log.Println("Error storing tester data in MongoDB:", err)
+		return
 	}
+
+	split := strings.Split(email, "@")
+	prefix := strings.Repeat("*", len(split[0]))
+	suffix := split[1]
 
 	embed := &discordgo.MessageEmbed{
 		Title: "New Beta Tester Signup",
@@ -441,7 +446,7 @@ func handleBetaSignupSubmit(s *discordgo.Session, i *discordgo.InteractionCreate
 			},
 			{
 				Name:  "Email",
-				Value: email,
+				Value: "```" + prefix + "@" + suffix + "```",
 			},
 			{
 				Name:  "Age 13+",
@@ -453,17 +458,6 @@ func handleBetaSignupSubmit(s *discordgo.Session, i *discordgo.InteractionCreate
 	_, err = s.ChannelMessageSendEmbed("1265870251699208202", embed)
 	if err != nil {
 		log.Println("Error sending form content:", err)
-	}
-
-	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "Thank you for signing up as a beta tester!",
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
-	})
-	if err != nil {
-		log.Println("Error responding to interaction:", err)
 	}
 }
 
