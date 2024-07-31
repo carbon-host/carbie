@@ -42,7 +42,7 @@ func init() {
 		panic(err)
 	}
 
-	db = client.Database("carbiedev")
+	db = client.Database("carbie")
 
 	ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
